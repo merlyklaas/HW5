@@ -1,0 +1,113 @@
+---
+title: "lab_5"
+author: "Merly Klaas"
+date: "11/2/2021"
+output: html_document
+---
+## 1. Start a new RStudio Project
+1.1. Be sure to add a folder for “data” and “scripts”.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+library(here)
+library(readxl)
+library(rio)
+library(readr)
+library(haven)
+library(tidylog)
+library(ggthemes)
+```
+
+## 2. Data
+2.1. Download the studentInfo.csv, studentAssessment.csv, and assessments data from the course website.
+
+2.2. Place the files in the “data” folder in your project.
+
+2.3. Read in the data.
+```{r}
+asses <- import(here("data", "assessments.csv"))
+stu_asses <- import(here("data", "studentAssessment.csv"))
+stu_info <- import(here("data", "studentInfo.csv"))
+```
+
+## 3. Join
+3.1. Join the studentInfo data and the studentAssessment data. Name the joined data student.
+
+```{r}
+student <- inner_join(stu_info, stu_asses, by= "id_student")
+
+```
+
+3.2. What key(s) were used in the join? id_student
+
+3.3. How many rows are in this joined data? If that is different than the number of rows in the studentInfo data, why?
+
+
+There are  207,319 rows in the new data because there are new observations in stu_asses that which stu_info did not have before. 
+
+
+3.3. Join the newly created student data with the assessments data. Name the joined data student.
+```{r}
+student <- inner_join (student, asses, by = "id_assessment")
+```
+
+
+
+3.4. What key(s) were used in the join? id_assessment
+
+3.5. What new variables were added with this join?  There are 7 columns added (code_module.x, code_presentation.x, code_module.y, code_presentation.y, assessment_type, date, and weight)
+
+## 4. Wrangle
+4.1. Create a new dataset named student_tma that consists only of TMA (Tutor Marked Assessment) assessments.
+```{r}
+student_tma <- student %>% 
+  filter(assessment_type == "TMA")
+```
+
+
+4.2. Create a new dataset named student_tma_max that contains the maximum (max()) TMA score for each student. (Note. Use filter rather than summarize.)
+
+```{r}
+student_tma_max <- student_tma %>% 
+  group_by (id_student) %>% 
+  filter(score == max(score))
+```
+4.3. How many rows are in this joined data? What does each row represent?
+in student_tma there are 118,075 rows, each  represents all TMA exam's score for each student that had been taken multiple times. 
+in student_tma_max there are 29,166 rows, each represents only the highest TMA exam's score(s) each student has ever achieved.   
+
+4.4. Create a dataset named agg_tma_max that contains the mean TMA score by “highest_education”, “disability”, and “final_result.”
+
+```{r}
+
+agg_tma_max <- student_tma_max %>% 
+  group_by(highest_education, disability, final_result) %>% 
+  mutate( highest_education = factor(highest_education, levels = c("Post Graduate Qualification", "HE Qualification", "A Level or Equivalent", "Lower Than A Level", "No Formal quals"))) %>% 
+  summarize(mean = mean(score))
+
+
+```
+6. Plot
+6.1. Reproduce the following plot, using any theme and colors you want except for the defaults.
+
+```{r}
+
+  ggplot(agg_tma_max, aes(final_result, mean))+
+  geom_col(aes(fill= disability) , 
+          position = "dodge") +
+  coord_flip()+
+  facet_grid(rows = vars (highest_education)) +
+  scale_fill_wsj()+
+  labs (x= "Final Result Designation",
+        y= "Mean Tutor Marked Assessment (TMA)" ,
+        title = "Average TMA Scores",
+        subtitle = "by education level, disability status, and final result designation" ,
+        caption = "Data from Kuzile, Hlosta, & Zdrahal (2017)
+        https://analyse.kmi.open.ac.uk/open_dataset", 
+        fill = "Disability Status"
+          )
+
+```
+
